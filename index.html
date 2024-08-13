@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Portfolio</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-rainbow {
+            0%, 100% { background-color: #ff0000; transform: scale(1); }
+            20% { background-color: #ff7f00; }
+            40% { background-color: #ffff00; transform: scale(1.1); }
+            60% { background-color: #00ff00; }
+            80% { background-color: #0000ff; transform: scale(0.9); }
+        }
+        .animate-pulse-rainbow {
+            animation: pulse-rainbow 5s infinite;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) rotate(-5deg); }
+            20%, 40%, 60%, 80% { transform: translateX(5px) rotate(5deg); }
+        }
+        .hover-shake:hover {
+            animation: shake 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <button id="theme-toggle" aria-label="Toggle dark mode">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+            <button id="hamburger" aria-label="Toggle navigation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <div id="nav-menu">
+                <ul>
+                    <li><a href="#home" class="active">Home</a></li>
+                    <li><a href="#story">Story</a></li>
+                    <li><a href="#picture">Picture</a></li>
+                    <li><a href="#contact">Message</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home">
+            <div class="parallax-layer layer-1"></div>
+            <div class="parallax-layer layer-2"></div>
+            <div class="content">
+                <h1>Hi, I'm Hisyam Zeeshan</h1>
+                <p>I'm Irreplaceable</p>
+                <button class="px-6 py-3 text-red font-bold text-lg rounded-full 
+                   shadow-lg animate-pulse-rainbow hover-shake
+                   transition-all duration-300 ease-in-out
+                   hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50
+                   active:translate-y-1">
+        Klik Saya!
+    </button>
+            </div>
+        </section>
+
+        <section id="story">
+            <h2>Do talk about STORY??</h2>
+            <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Mollitia tenetur id doloribus numquam 
+                repellat eius nostrum, dolorum voluptates nam fuga quidem natus reprehenderit rerum ratione dicta 
+                deleniti. Rem natus perspiciatis quidem, ratione placeat culpa eveniet voluptatibus explicabo saepe 
+                quos quibusdam officia optio velit possimus totam consectetur ipsam sed veniam cupiditate! Lorem ipsum 
+                dolor sit amet consectetur adipisicing elit. Ea neque totam, consectetur quae eos aperiam harum, aliquam 
+                cupiditate enim eaque aut distinctio! Omnis, incidunt est voluptatibus cupiditate commodi eum molestias 
+                sequi atque assumenda ea ad blanditiis? Magnam non eum distinctio, quis provident quos iure hic fugit
+                 modi ullam deserunt libero atque assumenda voluptatibus similique dolore voluptates dolores pariatur, 
+                 dolorem tempore? Quaerat, maiores! Voluptatibus odit laborum dolorum commodi! Ratione, repudiandae neque
+                  soluta facere est reprehenderit fuga ab delectus eaque suscipit amet esse numquam eos molestias 
+                  architecto quod. Corporis aperiam repudiandae natus nobis, expedita magni sunt quaerat error magnam!
+                   Officiis, beatae ut!
+            </p>
+        </section>
+    <section id="picture">
+        <h2>My Picture >>></h2>
+        <div class="projects">
+            <div class="project">
+                <img src="image/download (5).jpg" alt="Project 1" />
+                <h3>❤︎Husband❤︎</h3>
+            </div>
+            <div class="project">
+                <img src="image/valeraprivet.jpg" alt="Project 2" />
+                <h3>❤︎Wife❤︎</h3>
+            </div>
+            <!-- Add more projects as needed -->
+        </div>
+    </section>
+
+    <section id="contact" class="reveal">
+        <div class="container">
+            <h2>Contact Me</h2>
+            <form id="contactForm" action="send_email.php" method="POST">
+                <input type="text" name="name" placeholder="Your Name" required>
+                <input type="email" name="email" placeholder="Your Email" required>
+                <textarea name="message" placeholder="Your Message" required></textarea>
+                <button type="submit" class="btn">Send Message</button>
+            </form>
+            <div id="formStatus"></div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2024 ZeeshanChams. All rights reserved.</p>
+</footer>
+
+    <script src="index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+</body>
+</html>
