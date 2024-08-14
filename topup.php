@@ -89,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $orderId = $conn->insert_id;
                 
                 // Send order details via WhatsApp
-                $message = urlencode("Terima kasih atas pesanan Anda. Detail pesanan: Game: $game, User ID: $userId, Jumlah: Rp $amount, Metode Pembayaran: $paymentMethod. Order ID: $orderId");
+                $message = urlencode("Thank you for your order. Details: Game: $game, User ID: $userId, Amount: Rp $amount, Payment Method: $paymentMethod. Order ID: $orderId");
                 $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
                 
                 echo json_encode(['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl]);
@@ -129,8 +129,8 @@ $conn->close();
             margin: auto;
             background: white;
             padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         h1, h2 {
             color: #333;
@@ -144,16 +144,20 @@ $conn->close();
             margin-top: 10px;
         }
         input, select {
-            padding: 8px;
+            padding: 10px;
             margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         button {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
             margin-top: 20px;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #45a049;
@@ -165,7 +169,7 @@ $conn->close();
             margin-top: 20px;
             padding: 20px;
             background-color: #e9f7ef;
-            border-radius: 5px;
+            border-radius: 8px;
         }
         .loader {
             border: 5px solid #f3f3f3;
