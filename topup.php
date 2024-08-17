@@ -22,49 +22,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = generateOTP();
         
-        // Save OTP to database
         $sql = "INSERT INTO verifications (phone_number, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
         
         if ($stmt->execute()) {
-            // Send OTP via WhatsApp
             $message = urlencode("Your OTP for game top-up is: $otp. It will expire in 5 minutes.");
-            $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
+            $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
             
             echo json_encode(['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl]);
-            exit();
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send OTP']);
-            exit();
+            echo json_encode(['success' => false, 'message' => 'Failed to send OTP: ' . $stmt->error]);
         }
-        
-        $stmt->close();
+        exit();
     } elseif (isset($_POST['verifyOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = $_POST['otp'];
         
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND otp = ? AND expires_at > NOW() AND verified = FALSE";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($result->num_rows > 0) {
-            // OTP is valid
             $sql = "UPDATE verifications SET verified = TRUE WHERE phone_number = ? AND otp = ?";
             $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+                exit();
+            }
             $stmt->bind_param("ss", $phoneNumber, $otp);
             $stmt->execute();
             
             echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
-            exit();
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
-            exit();
         }
-        
-        $stmt->close();
+        exit();
     } elseif (isset($_POST['submitOrder'])) {
         $game = $_POST['game'];
         $userId = $_POST['userId'];
@@ -72,38 +75,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $amount = $_POST['amount'];
         $paymentMethod = $_POST['paymentMethod'];
         
-        // Check if phone number is verified
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND verified = TRUE";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("s", $phoneNumber);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($result->num_rows > 0) {
-            // Phone number is verified, proceed with order
             $sql = "INSERT INTO orders (game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+                exit();
+            }
             $stmt->bind_param("sssds", $game, $userId, $phoneNumber, $amount, $paymentMethod);
             
             if ($stmt->execute()) {
                 $orderId = $conn->insert_id;
                 
-                // Send order details via WhatsApp
                 $message = urlencode("Thank you for your order. Details: Game: $game, User ID: $userId, Amount: Rp $amount, Payment Method: $paymentMethod. Order ID: $orderId");
-                $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
+                $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
                 
                 echo json_encode(['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl]);
-                exit();
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to place order']);
-                exit();
+                echo json_encode(['success' => false, 'message' => 'Failed to place order: ' . $stmt->error]);
             }
         } else {
             echo json_encode(['success' => false, 'message' => 'Phone number not verified']);
-            exit();
         }
-        
-        $stmt->close();
+        exit();
     }
 }
 
@@ -259,10 +263,11 @@ $conn->close();
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `sendOTP=1&phoneNumber=${phoneNumber}`
+                body: `sendOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}`
             })
             .then(response => response.json())
             .then(data => {
+                console.log(data); // Debugging
                 if (data.success) {
                     alert(data.message);
                     document.getElementById('otpVerification').classList.remove('hidden');
@@ -270,6 +275,10 @@ $conn->close();
                 } else {
                     alert(data.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat mengirim OTP');
             });
         });
 
@@ -282,21 +291,27 @@ $conn->close();
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `verifyOTP=1&phoneNumber=${phoneNumber}&otp=${otp}`
+                body: `verifyOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}&otp=${encodeURIComponent(otp)}`
             })
             .then(response => response.json())
             .then(data => {
+                console.log(data); // Debugging
                 if (data.success) {
                     alert(data.message);
                     document.getElementById('submitOrder').disabled = false;
                 } else {
                     alert(data.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat memverifikasi OTP');
             });
         });
 
         document.getElementById('initialForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Form submitted'); // Debugging
             
             const formData = new FormData(this);
             formData.append('submitOrder', '1');
@@ -307,6 +322,7 @@ $conn->close();
             })
             .then(response => response.json())
             .then(data => {
+                console.log(data); // Debugging
                 if (data.success) {
                     alert(data.message);
                     document.getElementById('topupForm').classList.add('hidden');
@@ -317,11 +333,14 @@ $conn->close();
                     document.getElementById('selectedPaymentMethod').textContent = formData.get('paymentMethod');
                     document.getElementById('selectedPhoneNumber').textContent = formData.get('phoneNumber');
                     
-                    // Redirect to WhatsApp
                     window.open(data.whatsappUrl, '_blank');
                 } else {
                     alert(data.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat memproses pembayaran');
             });
         });
     </script>
