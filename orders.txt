@@ -1,2 +1,0 @@
-Game: Mobile Legends, User ID: 345345345, Amount: 20000, Payment Method: creditCard
-Game: Mobile Legends, User ID: 235554235, Amount: 50000, Payment Method: bankTransfer

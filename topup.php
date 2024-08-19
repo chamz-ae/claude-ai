@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+// Enable error reporting for debugging (disable in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Database connection
 $servername = "localhost";
 $username = "root";
@@ -10,60 +14,61 @@ $dbname = "topup_game";
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die(json_encode(['success' => false, 'message' => "Connection failed: " . $conn->connect_error]));
 }
 
 function generateOTP() {
     return sprintf("%06d", mt_rand(0, 999999));
 }
 
+function generateReceiptNumber() {
+    return 'RCV' . date('YmdHis') . rand(1000, 9999);
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $response = ['success' => false, 'message' => 'Invalid request'];
+
     if (isset($_POST['sendOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = generateOTP();
-        
+       
         // Save OTP to database
         $sql = "INSERT INTO verifications (phone_number, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("ss", $phoneNumber, $otp);
-        
+       
         if ($stmt->execute()) {
-            // Send OTP via WhatsApp
             $message = urlencode("Your OTP for game top-up is: $otp. It will expire in 5 minutes.");
             $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
-            
-            echo json_encode(['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl]);
-            exit();
+            $response = ['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl];
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send OTP']);
-            exit();
+            $response = ['success' => false, 'message' => 'Failed to send OTP: ' . $conn->error];
         }
-        
+       
         $stmt->close();
     } elseif (isset($_POST['verifyOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = $_POST['otp'];
-        
+       
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND otp = ? AND expires_at > NOW() AND verified = FALSE";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("ss", $phoneNumber, $otp);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+       
         if ($result->num_rows > 0) {
-            // OTP is valid
             $sql = "UPDATE verifications SET verified = TRUE WHERE phone_number = ? AND otp = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ss", $phoneNumber, $otp);
-            $stmt->execute();
-            
-            echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
-            exit();
+            if ($stmt->execute()) {
+                $response = ['success' => true, 'message' => 'OTP verified successfully'];
+            } else {
+                $response = ['success' => false, 'message' => 'Failed to update verification status: ' . $conn->error];
+            }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
-            exit();
+            $response = ['success' => false, 'message' => 'Invalid or expired OTP'];
         }
-        
+       
         $stmt->close();
     } elseif (isset($_POST['submitOrder'])) {
         $game = $_POST['game'];
@@ -71,40 +76,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $phoneNumber = $_POST['phoneNumber'];
         $amount = $_POST['amount'];
         $paymentMethod = $_POST['paymentMethod'];
-        
+       
         // Check if phone number is verified
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND verified = TRUE";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $phoneNumber);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+       
         if ($result->num_rows > 0) {
-            // Phone number is verified, proceed with order
-            $sql = "INSERT INTO orders (game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?)";
+            $receiptNumber = generateReceiptNumber();
+            $sql = "INSERT INTO orders (receipt_number, game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssds", $game, $userId, $phoneNumber, $amount, $paymentMethod);
-            
+            $stmt->bind_param("ssssds", $receiptNumber, $game, $userId, $phoneNumber, $amount, $paymentMethod);
+           
             if ($stmt->execute()) {
                 $orderId = $conn->insert_id;
-                
-                // Send order details via WhatsApp
-                $message = urlencode("Thank you for your order. Details: Game: $game, User ID: $userId, Amount: Rp $amount, Payment Method: $paymentMethod. Order ID: $orderId");
+               
+                $paymentProof = [
+                    'receiptNumber' => $receiptNumber,
+                    'orderId' => $orderId,
+                    'game' => $game,
+                    'userId' => $userId,
+                    'amount' => $amount,
+                    'paymentMethod' => $paymentMethod,
+                    'phoneNumber' => $phoneNumber,
+                    'date' => date('Y-m-d H:i:s')
+                ];
+               
+                $message = urlencode("Terima kasih atas pesanan Anda. Detail pesanan:\n\n" .
+                    "No. Kuitansi: {$paymentProof['receiptNumber']}\n" .
+                    "ID Pesanan: {$paymentProof['orderId']}\n" .
+                    "Game: {$paymentProof['game']}\n" .
+                    "User ID: {$paymentProof['userId']}\n" .
+                    "Jumlah: Rp {$paymentProof['amount']}\n" .
+                    "Metode Pembayaran: {$paymentProof['paymentMethod']}\n" .
+                    "Tanggal: {$paymentProof['date']}\n\n" .
+                    "Ini adalah bukti pembayaran Anda. Harap simpan untuk referensi.");
                 $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
-                
-                echo json_encode(['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl]);
-                exit();
+               
+                $response = ['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl, 'paymentProof' => $paymentProof];
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to place order']);
-                exit();
+                $response = ['success' => false, 'message' => 'Failed to place order: ' . $conn->error];
             }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Phone number not verified']);
-            exit();
+            $response = ['success' => false, 'message' => 'Phone number not verified'];
         }
-        
+       
         $stmt->close();
     }
+
+    echo json_encode($response);
+    exit();
 }
 
 $conn->close();
@@ -115,90 +138,211 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website Top-up Game</title>
+    <title>GameBoost - Pusat Top-up Game</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #00cec9;
+            --background-color: #2d3436;
+            --text-color: #dfe6e9;
+            --card-background: #34495e;
+        }
+
+        * {
             margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
         .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        h1, h2 {
-            color: #333;
+
+        header {
+            background-color: var(--primary-color);
+            padding: 20px 0;
             text-align: center;
         }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .game-card {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .game-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .game-info {
+            padding: 20px;
+        }
+
+        .game-title {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .top-up-btn {
+            display: inline-block;
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .top-up-btn:hover {
+            background-color: #81ecec;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: var(--card-background);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
         form {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            gap: 15px;
         }
+
         label {
-            margin-top: 10px;
+            font-weight: bold;
         }
+
         input, select {
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
+            width: 100%;
             padding: 10px;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.3s;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
         }
+
         button:hover {
-            background-color: #45a049;
+            background-color: #81ecec;
         }
+
+        #otpVerification, #paymentDetails, #processingPayment {
+            margin-top: 20px;
+        }
+
         .hidden {
             display: none;
-        }
-        #paymentDetails, #processingPayment {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #e9f7ef;
-            border-radius: 8px;
-        }
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="topupForm">
-            <h1>Top-up Game Anda</h1>
-            <form id="initialForm">
-                <label for="game">Pilih Game:</label>
-                <select id="game" name="game" required>
-                    <option value="">--Pilih Game--</option>
-                    <option value="Mobile Legends">Mobile Legends</option>
-                    <option value="PUBG Mobile">PUBG Mobile</option>
-                    <option value="Free Fire">Free Fire</option>
-                </select>
+    <header>
+        <div class="container">
+            <h1>GameBoost</h1>
+            <p>Pusat Top-up Game Terpercaya</p>
+        </div>
+    </header>
 
+    <main class="container">
+        <div class="game-grid">
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/WWcssdzTZvx7Fc84lfMpVuyMXg83_PwHBxA25WSaYHJSg58EkN8WFTJFwPpA3sYCmpk" alt="Mobile Legends" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">Mobile Legends</h2>
+                    <a href="#" class="top-up-btn" data-game="Mobile Legends">Top-up Sekarang</a>
+                </div>
+            </div>
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/JRd05pyBH41qjgsJuWduRJpDeZG0Hnb0yjf2nWqO7VaGKL10-G5UIygxED-WNOc3pg" alt="PUBG Mobile" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">PUBG Mobile</h2>
+                    <a href="#" class="top-up-btn" data-game="PUBG Mobile">Top-up Sekarang</a>
+                </div>
+            </div>
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/WWcssdzTZvx7Fc84lfMpVuyMXg83_PwHBxA25WSaYHJSg58EkN8WFTJFwPpA3sYCmpk" alt="Free Fire" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">Free Fire</h2>
+                    <a href="#" class="top-up-btn" data-game="Free Fire">Top-up Sekarang</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="topUpModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Top-up <span id="selectedGameTitle"></span></h2>
+            <form id="topUpForm">
+                <input type="hidden" id="game" name="game">
                 <label for="userId">ID Pengguna:</label>
                 <input type="text" id="userId" name="userId" required>
 
@@ -221,9 +365,9 @@ $conn->close();
 
                 <label for="phoneNumber">Nomor Telepon (WhatsApp):</label>
                 <input type="tel" id="phoneNumber" name="phoneNumber" required pattern="[0-9]{10,15}">
-                
+               
                 <button type="button" id="sendOTP">Kirim OTP</button>
-                
+               
                 <div id="otpVerification" class="hidden">
                     <label for="otp">Masukkan OTP:</label>
                     <input type="text" id="otp" name="otp" required pattern="[0-9]{6}">
@@ -232,98 +376,148 @@ $conn->close();
 
                 <button type="submit" id="submitOrder" disabled>Lanjutkan ke Pembayaran</button>
             </form>
-        </div>
 
-        <div id="paymentDetails" class="hidden">
-            <h2>Detail Pembayaran</h2>
-            <p><strong>Game:</strong> <span id="selectedGame"></span></p>
-            <p><strong>ID Pengguna:</strong> <span id="selectedUserId"></span></p>
-            <p><strong>Jumlah Top-up:</strong> Rp <span id="selectedAmount"></span></p>
-            <p><strong>Metode Pembayaran:</strong> <span id="selectedPaymentMethod"></span></p>
-            <p><strong>Nomor WhatsApp:</strong> <span id="selectedPhoneNumber"></span></p>
-        </div>
+            <div id="paymentDetails" class="hidden">
+                <h3>Detail Pembayaran</h3>
+                <p><strong>Game:</strong> <span id="paymentGame"></span></p>
+                <p><strong>ID Pengguna:</strong> <span id="paymentUserId"></span></p>
+                <p><strong>Jumlah Top-up:</strong> Rp <span id="paymentAmount"></span></p>
+                <p><strong>Metode Pembayaran:</strong> <span id="paymentMethod"></span></p>
+                <p><strong>Nomor WhatsApp:</strong> <span id="paymentPhoneNumber"></span></p>
+            </div>
 
-        <div id="processingPayment" class="hidden">
-            <h2>Memproses Pembayaran</h2>
-            <div class="loader"></div>
-            <p>Mohon tunggu, pembayaran Anda sedang diproses...</p>
+            <div id="processingPayment" class="hidden">
+                <h3>Memproses Pembayaran</h3>
+                <p>Mohon tunggu, pembayaran Anda sedang diproses...</p>
+            </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('sendOTP').addEventListener('click', function() {
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            
-            fetch('', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `sendOTP=1&phoneNumber=${phoneNumber}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    document.getElementById('otpVerification').classList.remove('hidden');
-                    window.open(data.whatsappUrl, '_blank');
-                } else {
-                    alert(data.message);
-                }
-            });
-        });
+        document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById("topUpModal");
+    const topUpBtns = document.querySelectorAll(".top-up-btn");
+    const closeBtn = document.querySelector(".close");
+    const selectedGameTitle = document.getElementById("selectedGameTitle");
+    const gameInput = document.getElementById("game");
 
-        document.getElementById('verifyOTP').addEventListener('click', function() {
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            const otp = document.getElementById('otp').value;
-            
-            fetch('', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `verifyOTP=1&phoneNumber=${phoneNumber}&otp=${otp}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    document.getElementById('submitOrder').disabled = false;
-                } else {
-                    alert(data.message);
-                }
-            });
-        });
+    topUpBtns.forEach(btn => {
+        btn.onclick = function() {
+            modal.style.display = "block";
+            selectedGameTitle.textContent = this.dataset.game;
+            gameInput.value = this.dataset.game;
+        }
+    });
 
-        document.getElementById('initialForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            formData.append('submitOrder', '1');
-            
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    document.getElementById('topupForm').classList.add('hidden');
-                    document.getElementById('paymentDetails').classList.remove('hidden');
-                    document.getElementById('selectedGame').textContent = formData.get('game');
-                    document.getElementById('selectedUserId').textContent = formData.get('userId');
-                    document.getElementById('selectedAmount').textContent = formData.get('amount');
-                    document.getElementById('selectedPaymentMethod').textContent = formData.get('paymentMethod');
-                    document.getElementById('selectedPhoneNumber').textContent = formData.get('phoneNumber');
-                    
-                    // Redirect to WhatsApp
-                    window.open(data.whatsappUrl, '_blank');
-                } else {
-                    alert(data.message);
-                }
-            });
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    function handleResponse(response) {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    function displayError(message) {
+        console.error('Error:', message);
+        alert('Terjadi kesalahan: ' + message);
+    }
+
+    document.getElementById('sendOTP').addEventListener('click', function() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+
+        fetch('', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `sendOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}`
+        })
+        .then(handleResponse)
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('otpVerification').classList.remove('hidden');
+                window.open(data.whatsappUrl, '_blank');
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => displayError(error.message));
+    });
+
+    document.getElementById('verifyOTP').addEventListener('click', function() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const otp = document.getElementById('otp').value;
+
+        fetch('', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `verifyOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}&otp=${encodeURIComponent(otp)}`
+        })
+        .then(handleResponse)
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('submitOrder').disabled = false;
+            } else {
+                throw new Error(data.message || 'OTP verification failed');
+            }
+        })
+        .catch(error => displayError(error.message));
+    });
+
+    document.getElementById('topUpForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        formData.append('submitOrder', '1');
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(handleResponse)
+        .then(data => {
+            if (data.success) {
+                document.getElementById('topUpForm').classList.add('hidden');
+                document.getElementById('paymentDetails').classList.remove('hidden');
+                document.getElementById('paymentGame').textContent = formData.get('game');
+                document.getElementById('paymentUserId').textContent = formData.get('userId');
+                document.getElementById('paymentAmount').textContent = formData.get('amount');
+                document.getElementById('paymentMethod').textContent = formData.get('paymentMethod');
+                document.getElementById('paymentPhoneNumber').textContent = formData.get('phoneNumber');
+
+                document.getElementById('processingPayment').classList.remove('hidden');
+
+                setTimeout(() => {
+                    document.getElementById('processingPayment').classList.add('hidden');
+                    if (data.whatsappUrl) {
+                        window.open(data.whatsappUrl, '_blank');
+                    } else {
+                        console.error('WhatsApp URL not found in response');
+                    }
+                }, 3000);
+            } else {
+                throw new Error(data.message || 'Order submission failed');
+            }
+        })
+        .catch(error => {
+            displayError(error.message);
+            document.getElementById('processingPayment').classList.add('hidden');
         });
+    });
+});
     </script>
 </body>
 </html>

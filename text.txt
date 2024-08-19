@@ -1,0 +1,163 @@
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+        }
+        input, select {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .hidden {
+            display: none;
+        }
+        #paymentDetails, #processingPayment {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e9f7ef;
+            border-radius: 8px;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+
+    // HTML
+
+<div id="topupForm">
+
+
+
+            <h1>Top-up Game Anda</h1>
+            <form id="initialForm">
+                <label for="game">Pilih Game:</label>
+                <select id="game" name="game" required>
+                    <option value="">--Pilih Game--</option>
+                    <option value="Mobile Legends">Mobile Legends</option>
+                    <option value="PUBG Mobile">PUBG Mobile</option>
+                    <option value="Free Fire">Free Fire</option>
+                </select>
+
+                <label for="userId">ID Pengguna:</label>
+                <input type="text" id="userId" name="userId" required>
+
+                <label for="amount">Jumlah Top-up:</label>
+                <select id="amount" name="amount" required>
+                    <option value="">--Pilih Jumlah--</option>
+                    <option value="10000">10.000 (10 Diamonds)</option>
+                    <option value="20000">20.000 (50 Diamonds)</option>
+                    <option value="50000">50.000 (150 Diamonds)</option>
+                    <option value="100000">100.000 (300 Diamonds)</option>
+                </select>
+
+                <label for="paymentMethod">Metode Pembayaran:</label>
+                <select id="paymentMethod" name="paymentMethod" required>
+                    <option value="">--Pilih Metode Pembayaran--</option>
+                    <option value="bankTransfer">Transfer Bank</option>
+                    <option value="eWallet">E-Wallet</option>
+                    <option value="creditCard">Kartu Kredit</option>
+                </select>
+
+                <label for="phoneNumber">Nomor Telepon (WhatsApp):</label>
+                <input type="tel" id="phoneNumber" name="phoneNumber" required pattern="[0-9]{10,15}">
+                
+                <button type="button" id="sendOTP">Kirim OTP</button>
+                
+                <div id="otpVerification" class="hidden">
+                    <label for="otp">Masukkan OTP:</label>
+                    <input type="text" id="otp" name="otp" required pattern="[0-9]{6}">
+                    <button type="button" id="verifyOTP">Verifikasi OTP</button>
+                </div>
+
+                <button type="submit" id="submitOrder" disabled>Lanjutkan ke Pembayaran</button>
+            </form>
+        </div>
+
+        <div id="paymentDetails" class="hidden">
+            <h2>Detail Pembayaran</h2>
+            <p><strong>Game:</strong> <span id="selectedGame"></span></p>
+            <p><strong>ID Pengguna:</strong> <span id="selectedUserId"></span></p>
+            <p><strong>Jumlah Top-up:</strong> Rp <span id="selectedAmount"></span></p>
+            <p><strong>Metode Pembayaran:</strong> <span id="selectedPaymentMethod"></span></p>
+            <p><strong>Nomor WhatsApp:</strong> <span id="selectedPhoneNumber"></span></p>
+        </div>
+
+        <div id="processingPayment" class="hidden">
+            <h2>Memproses Pembayaran</h2>
+            <div class="loader"></div>
+            <p>Mohon tunggu, pembayaran Anda sedang diproses...</p>
+        </div>
+
+
+////
+
+<div class="game-grid">
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/WWcssdzTZvx7Fc84lfMpVuyMXg83_PwHBxA25WSaYHJSg58EkN8WFTJFwPpA3sYCmpk" alt="Mobile Legends" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">Mobile Legends</h2>
+                    <a href="#" class="top-up-btn" data-game="Mobile Legends">Top-up Sekarang</a>
+                </div>
+            </div>
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/JRd05pyBH41qjgsJuWduRJpDeZG0Hnb0yjf2nWqO7VaGKL10-G5UIygxED-WNOc3pg" alt="PUBG Mobile" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">PUBG Mobile</h2>
+                    <a href="#" class="top-up-btn" data-game="PUBG Mobile">Top-up Sekarang</a>
+                </div>
+            </div>
+            <div class="game-card">
+                <img src="https://play-lh.googleusercontent.com/WWcssdzTZvx7Fc84lfMpVuyMXg83_PwHBxA25WSaYHJSg58EkN8WFTJFwPpA3sYCmpk" alt="Free Fire" class="game-image">
+                <div class="game-info">
+                    <h2 class="game-title">Free Fire</h2>
+                    <a href="#" class="top-up-btn" data-game="Free Fire">Top-up Sekarang</a>
+                </div>
+            </div>
+        </div>
