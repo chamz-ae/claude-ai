@@ -31,14 +31,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['sendOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = generateOTP();
+<<<<<<< HEAD
        
         // Save OTP to database
+=======
+        
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
         $sql = "INSERT INTO verifications (phone_number, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
        
         if ($stmt->execute()) {
             $message = urlencode("Your OTP for game top-up is: $otp. It will expire in 5 minutes.");
+<<<<<<< HEAD
             $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
             $response = ['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl];
         } else {
@@ -46,12 +55,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
        
         $stmt->close();
+=======
+            $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
+            
+            echo json_encode(['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to send OTP: ' . $stmt->error]);
+        }
+        exit();
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
     } elseif (isset($_POST['verifyOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = $_POST['otp'];
        
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND otp = ? AND expires_at > NOW() AND verified = FALSE";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -59,7 +81,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows > 0) {
             $sql = "UPDATE verifications SET verified = TRUE WHERE phone_number = ? AND otp = ?";
             $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+                exit();
+            }
             $stmt->bind_param("ss", $phoneNumber, $otp);
+<<<<<<< HEAD
             if ($stmt->execute()) {
                 $response = ['success' => true, 'message' => 'OTP verified successfully'];
             } else {
@@ -70,21 +97,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
        
         $stmt->close();
+=======
+            $stmt->execute();
+            
+            echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
+        }
+        exit();
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
     } elseif (isset($_POST['submitOrder'])) {
         $game = $_POST['game'];
         $userId = $_POST['userId'];
         $phoneNumber = $_POST['phoneNumber'];
         $amount = $_POST['amount'];
         $paymentMethod = $_POST['paymentMethod'];
+<<<<<<< HEAD
        
         // Check if phone number is verified
+=======
+        
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND verified = TRUE";
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+            exit();
+        }
         $stmt->bind_param("s", $phoneNumber);
         $stmt->execute();
         $result = $stmt->get_result();
        
         if ($result->num_rows > 0) {
+<<<<<<< HEAD
             $receiptNumber = generateReceiptNumber();
             $sql = "INSERT INTO orders (receipt_number, game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
@@ -124,6 +169,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
        
         $stmt->close();
+=======
+            $sql = "INSERT INTO orders (game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
+                exit();
+            }
+            $stmt->bind_param("sssds", $game, $userId, $phoneNumber, $amount, $paymentMethod);
+            
+            if ($stmt->execute()) {
+                $orderId = $conn->insert_id;
+                
+                $message = urlencode("Thank you for your order. Details: Game: $game, User ID: $userId, Amount: Rp $amount, Payment Method: $paymentMethod. Order ID: $orderId");
+                $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
+                
+                echo json_encode(['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to place order: ' . $stmt->error]);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Phone number not verified']);
+        }
+        exit();
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
     }
 
     echo json_encode($response);
@@ -394,127 +463,95 @@ $conn->close();
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById("topUpModal");
-    const topUpBtns = document.querySelectorAll(".top-up-btn");
-    const closeBtn = document.querySelector(".close");
-    const selectedGameTitle = document.getElementById("selectedGameTitle");
-    const gameInput = document.getElementById("game");
+=======
+        document.getElementById('sendOTP').addEventListener('click', function() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `sendOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data); // Debugging
+                if (data.success) {
+                    alert(data.message);
+                    document.getElementById('otpVerification').classList.remove('hidden');
+                    window.open(data.whatsappUrl, '_blank');
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat mengirim OTP');
+            });
+        });
 
-    topUpBtns.forEach(btn => {
-        btn.onclick = function() {
-            modal.style.display = "block";
-            selectedGameTitle.textContent = this.dataset.game;
-            gameInput.value = this.dataset.game;
-        }
-    });
+        document.getElementById('verifyOTP').addEventListener('click', function() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const otp = document.getElementById('otp').value;
+            
+            fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `verifyOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}&otp=${encodeURIComponent(otp)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data); // Debugging
+                if (data.success) {
+                    alert(data.message);
+                    document.getElementById('submitOrder').disabled = false;
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat memverifikasi OTP');
+            });
+        });
 
-    closeBtn.onclick = function() {
-        modal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
-    }
-
-    function handleResponse(response) {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    }
-
-    function displayError(message) {
-        console.error('Error:', message);
-        alert('Terjadi kesalahan: ' + message);
-    }
-
-    document.getElementById('sendOTP').addEventListener('click', function() {
-        const phoneNumber = document.getElementById('phoneNumber').value;
-
-        fetch('', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `sendOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}`
-        })
-        .then(handleResponse)
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                document.getElementById('otpVerification').classList.remove('hidden');
-                window.open(data.whatsappUrl, '_blank');
-            } else {
-                throw new Error(data.message || 'Unknown error occurred');
-            }
-        })
-        .catch(error => displayError(error.message));
-    });
-
-    document.getElementById('verifyOTP').addEventListener('click', function() {
-        const phoneNumber = document.getElementById('phoneNumber').value;
-        const otp = document.getElementById('otp').value;
-
-        fetch('', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `verifyOTP=1&phoneNumber=${encodeURIComponent(phoneNumber)}&otp=${encodeURIComponent(otp)}`
-        })
-        .then(handleResponse)
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                document.getElementById('submitOrder').disabled = false;
-            } else {
-                throw new Error(data.message || 'OTP verification failed');
-            }
-        })
-        .catch(error => displayError(error.message));
-    });
-
-    document.getElementById('topUpForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const formData = new FormData(this);
-        formData.append('submitOrder', '1');
-
-        fetch('', {
-            method: 'POST',
-            body: formData
-        })
-        .then(handleResponse)
-        .then(data => {
-            if (data.success) {
-                document.getElementById('topUpForm').classList.add('hidden');
-                document.getElementById('paymentDetails').classList.remove('hidden');
-                document.getElementById('paymentGame').textContent = formData.get('game');
-                document.getElementById('paymentUserId').textContent = formData.get('userId');
-                document.getElementById('paymentAmount').textContent = formData.get('amount');
-                document.getElementById('paymentMethod').textContent = formData.get('paymentMethod');
-                document.getElementById('paymentPhoneNumber').textContent = formData.get('phoneNumber');
-
-                document.getElementById('processingPayment').classList.remove('hidden');
-
-                setTimeout(() => {
-                    document.getElementById('processingPayment').classList.add('hidden');
-                    if (data.whatsappUrl) {
-                        window.open(data.whatsappUrl, '_blank');
-                    } else {
-                        console.error('WhatsApp URL not found in response');
-                    }
-                }, 3000);
-            } else {
-                throw new Error(data.message || 'Order submission failed');
-            }
-        })
-        .catch(error => {
-            displayError(error.message);
-            document.getElementById('processingPayment').classList.add('hidden');
+        document.getElementById('initialForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted'); // Debugging
+            
+            const formData = new FormData(this);
+            formData.append('submitOrder', '1');
+            
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data); // Debugging
+                if (data.success) {
+                    alert(data.message);
+                    document.getElementById('topupForm').classList.add('hidden');
+                    document.getElementById('paymentDetails').classList.remove('hidden');
+                    document.getElementById('selectedGame').textContent = formData.get('game');
+                    document.getElementById('selectedUserId').textContent = formData.get('userId');
+                    document.getElementById('selectedAmount').textContent = formData.get('amount');
+                    document.getElementById('selectedPaymentMethod').textContent = formData.get('paymentMethod');
+                    document.getElementById('selectedPhoneNumber').textContent = formData.get('phoneNumber');
+                    
+                    window.open(data.whatsappUrl, '_blank');
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat memproses pembayaran');
+            });
+>>>>>>> a09492b5e3feec26acc2a3a4820a8873b8506bf5
         });
     });
 });
