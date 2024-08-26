@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PC Assembly Blog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 45%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 72% 51%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --chart-1: 173 58% 39%;
+      --chart-2: 12 76% 61%;
+      --chart-3: 197 37% 24%;
+      --chart-4: 43 74% 66%;
+      --chart-5: 27 87% 67%;
+      --radius: 0.5rem;
+    }
+    img[src="/placeholder.svg"], img[src="/placeholder-user.jpg"] {
+      filter: sepia(.3) hue-rotate(-60deg) saturate(.5) opacity(0.8)
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <header class="bg-primary text-primary-foreground py-4 px-6 md:px-8">
+    <div class="container mx-auto flex items-center justify-between">
+      <a class="flex items-center gap-2" href="#">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-6 w-6"
+        >
+          <rect width="16" height="16" x="4" y="4" rx="2"></rect>
+          <rect width="6" height="6" x="9" y="9" rx="1"></rect>
+          <path d="M15 2v2"></path>
+          <path d="M15 20v2"></path>
+          <path d="M2 15h2"></path>
+          <path d="M2 9h2"></path>
+          <path d="M20 15h2"></path>
+          <path d="M20 9h2"></path>
+          <path d="M9 2v2"></path>
+          <path d="M9 20v2"></path>
+        </svg>
+        <span class="text-xl font-bold">PC Assembly Blog</span>
+      </a>
+      <div class="flex items-center gap-4">
+        <form class="flex items-center">
+          <input
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1 rounded-l-lg border-r-0 focus:ring-primary focus:border-primary"
+            placeholder="Search articles..."
+            type="text"
+          />
+          <button
+            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 rounded-r-lg bg-primary text-primary-foreground hover:bg-primary/80"
+            type="submit"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="h-5 w-5"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+          </button>
+        </form>
+        <nav class="hidden md:flex items-center gap-4">
+          <a class="hover:underline" href="#">Home</a>
+          <a class="hover:underline" href="#">Articles</a>
+          <a class="hover:underline" href="#">About</a>
+          <a class="hover:underline" href="#">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mx-auto my-8 md:my-12 lg:my-16">
+    <div class="relative h-64 md:h-80 lg:h-96 overflow-hidden rounded-lg">
+      <img
+        src="/placeholder.svg"
+        alt="Computer Assembly"
+        width="1200"
+        height="600"
+        class="w-full h-full object-cover"
+        style="aspect-ratio: 1200 / 600; object-fit: cover;"
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white">Mastering Computer Assembly</h1>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto my-8 md:my-12 lg:my-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <img
+        src="/placeholder.svg"
+        alt="Article 1"
+        width="400"
+        height="225"
+        class="w-full h-48 object-cover"
+        style="aspect-ratio: 400 / 225; object-fit: cover;"
+      />
+      <div class="p-4">
+        <h2 class="text-xl font-bold mb-2">
+          <a href="#">Building a Gaming PC: Step-by-Step Guide</a>
+        </h2>
+        <p class="text-gray-600 mb-4">Learn how to build a high-performance gaming PC from scratch.</p>
+        <a class="text-primary hover:underline" href="#">Read More</a>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <img
+        src="/placeholder.svg"
+        alt="Article 2"
+        width="400"
+        height="225"
+        class="w-full h-48 object-cover"
+        style="aspect-ratio: 400 / 225; object-fit: cover;"
+      />
+      <div class="p-4">
+        <h2 class="text-xl font-bold mb-2">
+          <a href="#">Upgrading Your PC: A Comprehensive Guide</a>
+        </h2>
+        <p class="text-gray-600 mb-4">Discover the best ways to upgrade your existing PC for improved performance.</p>
+        <a class="text-primary hover:underline" href="#">Read More</a>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <img
+        src="/placeholder.svg"
+        alt="Article 3"
+        width="400"
+        height="225"
+        class="w-full h-48 object-cover"
+        style="aspect-ratio: 400 / 225; object-fit: cover;"
+      />
+      <div class="p-4">
+        <h2 class="text-xl font-bold mb-2">
+          <a href="#">Troubleshooting Common PC Issues</a>
+        </h2>
+        <p class="text-gray-600 mb-4">Solve common problems and keep your PC running smoothly.</p>
+        <a class="text-primary hover:underline" href="#">Read More</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-gray-100 py-8 md:py-12 lg:py-16">
+    <div class="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <h3 class="text-lg font-bold mb-4">Categories</h3>
+        <ul class="space-y-2">
+          <li><a class="text-gray-600 hover:text-primary" href="#">PC Building</a></li>
+          <li><a class="text-gray-600 hover:text-primary" href="#">Hardware Upgrades</a></li>
+          <li><a class="text-gray-600 hover:text-primary" href="#">Troubleshooting</a></li>
+          <li><a class="text-gray-600 hover:text-primary" href="#">PC Maintenance</a></li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <h3 class="text-lg font-bold mb-4">Tags</h3>
+        <div class="flex flex-wrap gap-2">
+          <a class="bg-primary text-primary-foreground px-3 py-1 rounded-full hover:bg-primary/80" href="#">PC Building</a>
+          <a class="bg-primary text-primary-foreground px-3 py-1 rounded-full hover:bg-primary/80" href="#">Hardware</a>
+          <a class="bg-primary text-primary-foreground px-3 py-1 rounded-full hover:bg-primary/80" href="#">Troubleshooting</a>
+          <a class="bg-primary text-primary-foreground px-3 py-1 rounded-full hover:bg-primary/80" href="#">Upgrades</a>
+          <a class="bg-primary text-primary-foreground px-3 py-1 rounded-full hover:bg-primary/80" href="#">Maintenance</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-gray-900 text-white py-6 md:py-8 lg:py-10">
+    <div class="container mx-auto flex flex-col md:flex-row items-center justify-between">
+      <div class="mb-4 md:mb-0">
+        <p>© 2023 PC Assembly Blog. All rights reserved.</p>
+      </div>
+      <div class="flex items-center space-x-4">
+        <a class="text-gray-400 hover:text-white" href="#">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-6 w-6"
+          >
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+          </svg>
+        </a>
+        <a class="text-gray-400 hover:text-white" href="#">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-6 w-6"
+          >
+            <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

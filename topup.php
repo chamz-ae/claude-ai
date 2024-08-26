@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// Enable error reporting for debugging (disable in production)
+// Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -35,79 +35,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Save OTP to database
         $sql = "INSERT INTO verifications (phone_number, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))";
         $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-            exit();
-        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
-       
+        
         if ($stmt->execute()) {
             $message = urlencode("Your OTP for game top-up is: $otp. It will expire in 5 minutes.");
-            $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
-            
-            echo json_encode(['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl]);
+            $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
+            $response = ['success' => true, 'message' => 'OTP sent successfully', 'whatsappUrl' => $whatsappUrl];
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send OTP: ' . $stmt->error]);
+            $response = ['success' => false, 'message' => 'Failed to send OTP: ' . $stmt->error];
         }
+        
         $stmt->close();
-        exit();
     } elseif (isset($_POST['verifyOTP'])) {
         $phoneNumber = $_POST['phoneNumber'];
         $otp = $_POST['otp'];
-       
+        
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND otp = ? AND expires_at > NOW() AND verified = FALSE";
         $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-            exit();
-        }
         $stmt->bind_param("ss", $phoneNumber, $otp);
         $stmt->execute();
         $result = $stmt->get_result();
-       
+        
         if ($result->num_rows > 0) {
             $sql = "UPDATE verifications SET verified = TRUE WHERE phone_number = ? AND otp = ?";
             $stmt = $conn->prepare($sql);
-            if (!$stmt) {
-                echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-                exit();
-            }
             $stmt->bind_param("ss", $phoneNumber, $otp);
-            $stmt->execute();
-            
-            echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
+            if ($stmt->execute()) {
+                $response = ['success' => true, 'message' => 'OTP verified successfully'];
+            } else {
+                $response = ['success' => false, 'message' => 'Failed to update verification status: ' . $stmt->error];
+            }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
+            $response = ['success' => false, 'message' => 'Invalid or expired OTP'];
         }
+        
         $stmt->close();
-        exit();
     } elseif (isset($_POST['submitOrder'])) {
         $game = $_POST['game'];
         $userId = $_POST['userId'];
         $phoneNumber = $_POST['phoneNumber'];
         $amount = $_POST['amount'];
         $paymentMethod = $_POST['paymentMethod'];
-       
+        
         // Check if phone number is verified
         $sql = "SELECT * FROM verifications WHERE phone_number = ? AND verified = TRUE";
         $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
-            exit();
-        }
         $stmt->bind_param("s", $phoneNumber);
         $stmt->execute();
         $result = $stmt->get_result();
-       
+        
         if ($result->num_rows > 0) {
             $receiptNumber = generateReceiptNumber();
             $sql = "INSERT INTO orders (receipt_number, game, user_id, phone_number, amount, payment_method) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssds", $receiptNumber, $game, $userId, $phoneNumber, $amount, $paymentMethod);
-           
+            
             if ($stmt->execute()) {
                 $orderId = $conn->insert_id;
-               
+                
                 $paymentProof = [
                     'receiptNumber' => $receiptNumber,
                     'orderId' => $orderId,
@@ -118,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     'phoneNumber' => $phoneNumber,
                     'date' => date('Y-m-d H:i:s')
                 ];
-               
+                
                 $message = urlencode("Terima kasih atas pesanan Anda. Detail pesanan:\n\n" .
                     "No. Kuitansi: {$paymentProof['receiptNumber']}\n" .
                     "ID Pesanan: {$paymentProof['orderId']}\n" .
@@ -128,17 +113,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     "Metode Pembayaran: {$paymentProof['paymentMethod']}\n" .
                     "Tanggal: {$paymentProof['date']}\n\n" .
                     "Ini adalah bukti pembayaran Anda. Harap simpan untuk referensi.");
-                $whatsappUrl = "https://wa.me/" . urlencode($phoneNumber) . "?text=$message";
-               
-                echo json_encode(['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl, 'paymentProof' => $paymentProof]);
+                $whatsappUrl = "https://wa.me/$phoneNumber?text=$message";
+                
+                $response = ['success' => true, 'message' => 'Order placed successfully', 'whatsappUrl' => $whatsappUrl, 'paymentProof' => $paymentProof];
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to place order: ' . $stmt->error]);
+                $response = ['success' => false, 'message' => 'Failed to place order: ' . $stmt->error];
             }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Phone number not verified']);
+            $response = ['success' => false, 'message' => 'Phone number not verified'];
         }
+        
         $stmt->close();
-        exit();
     }
 
     echo json_encode($response);
@@ -147,6 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 $conn->close();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="id">
@@ -186,34 +172,39 @@ $conn->close();
             background-color: var(--primary-color);
             padding: 20px 0;
             text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
             margin-top: 40px;
         }
 
         .game-card {
             background-color: var(--card-background);
-            border-radius: 10px;
+            border-radius: 15px;
             overflow: hidden;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .game-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
         .game-image {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: cover;
         }
 
@@ -222,23 +213,27 @@ $conn->close();
         }
 
         .game-title {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .top-up-btn {
             display: inline-block;
             background-color: var(--secondary-color);
             color: var(--background-color);
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 25px;
             text-decoration: none;
             font-weight: bold;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            text-align: center;
         }
 
         .top-up-btn:hover {
             background-color: #81ecec;
+            transform: scale(1.05);
         }
 
         .modal {
@@ -250,17 +245,19 @@ $conn->close();
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4);
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
-            background-color: var(--background-color);
-            margin: 15% auto;
-            padding: 20px;
+            background-color: var(--card-background);
+            margin: 10% auto;
+            padding: 30px;
             border: 1px solid #888;
-            width: 80%;
+            width: 90%;
             max-width: 500px;
-            border-radius: 10px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
 
         .close {
@@ -268,6 +265,7 @@ $conn->close();
             float: right;
             font-size: 28px;
             font-weight: bold;
+            transition: color 0.3s ease;
         }
 
         .close:hover,
@@ -283,13 +281,58 @@ $conn->close();
 
         .payment-details {
             background-color: var(--card-background);
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         .payment-details h2 {
             margin-bottom: 20px;
+            color: #ffffff;
+            font-size: 1.8rem;
+        }
+
+        form div {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #dfe6e9;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a69bd;
+            border-radius: 5px;
+            background-color: #2c3e50;
+            color: #dfe6e9;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #81ecec;
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -299,48 +342,48 @@ $conn->close();
     </header>
     <div class="container">
         <div class="game-grid">
-            <!-- Game 1 -->
+            <!-- Mobile Legends -->
             <div class="game-card">
-                <img src="game1.jpg" alt="Game 1" class="game-image">
+                <img src="https://play-lh.googleusercontent.com/ha1vofCWS5lhPpp-a9WjF8qHJmGhPxQnc2jxUl8AxdLl-R9j7tHwWVBGu4MPQqjDfKM" alt="Mobile Legends" class="game-image">
                 <div class="game-info">
-                    <div class="game-title">Game 1</div>
-                    <a href="#" class="top-up-btn" data-game="Game 1">Top-up Sekarang</a>
+                    <div class="game-title">Mobile Legends</div>
+                    <a href="#" class="top-up-btn" data-game="Mobile Legends">Top-up Sekarang</a>
                 </div>
             </div>
 
-            <!-- Game 2 -->
+            <!-- PUBG Mobile -->
             <div class="game-card">
-                <img src="game2.jpg" alt="Game 2" class="game-image">
+                <img src="https://play-lh.googleusercontent.com/JRd05pyBH41qjgsJuWduRJpDeZG0Hnb0yjf2nWqO7VaGKL10-G5UIygxED-WNOc3pg" alt="PUBG Mobile" class="game-image">
                 <div class="game-info">
-                    <div class="game-title">Game 2</div>
-                    <a href="#" class="top-up-btn" data-game="Game 2">Top-up Sekarang</a>
+                    <div class="game-title">PUBG Mobile</div>
+                    <a href="#" class="top-up-btn" data-game="PUBG Mobile">Top-up Sekarang</a>
                 </div>
             </div>
 
-            <!-- Game 3 -->
+            <!-- Free Fire -->
             <div class="game-card">
-                <img src="game3.jpg" alt="Game 3" class="game-image">
+                <img src="https://play-lh.googleusercontent.com/WWcssdzTZvx7Fc84lfMpVuyMXg83_PwrfpgSBd0IID_IuupsYVYJ34S9R2_5x57gHQ" alt="Free Fire" class="game-image">
                 <div class="game-info">
-                    <div class="game-title">Game 3</div>
-                    <a href="#" class="top-up-btn" data-game="Game 3">Top-up Sekarang</a>
+                    <div class="game-title">Free Fire</div>
+                    <a href="#" class="top-up-btn" data-game="Free Fire">Top-up Sekarang</a>
                 </div>
             </div>
 
-            <!-- Game 4 -->
+            <!-- Call of Duty Mobile -->
             <div class="game-card">
-                <img src="game4.jpg" alt="Game 4" class="game-image">
+                <img src="https://play-lh.googleusercontent.com/11nQUJrUUH0JtTTvXqPheB3A4cqoASVZaCQsweNntA7YR7RS6_zUc6oZxVbBzreNGZA" alt="Call of Duty Mobile" class="game-image">
                 <div class="game-info">
-                    <div class="game-title">Game 4</div>
-                    <a href="#" class="top-up-btn" data-game="Game 4">Top-up Sekarang</a>
+                    <div class="game-title">Call of Duty Mobile</div>
+                    <a href="#" class="top-up-btn" data-game="Call of Duty Mobile">Top-up Sekarang</a>
                 </div>
             </div>
 
-            <!-- Game 5 -->
+            <!-- Point Blank -->
             <div class="game-card">
-                <img src="game5.jpg" alt="Game 5" class="game-image">
+                <img src="https://play-lh.googleusercontent.com/ONpRDWyhtAxyfcy2CLxLqBtH5dHcmKLZVSptWiiWzN03uQ-tSG5VJmdLyYfHgp6wyQ" alt="Point Blank" class="game-image">
                 <div class="game-info">
-                    <div class="game-title">Game 5</div>
-                    <a href="#" class="top-up-btn" data-game="Game 5">Top-up Sekarang</a>
+                    <div class="game-title">Point Blank</div>
+                    <a href="#" class="top-up-btn" data-game="Point Blank">Top-up Sekarang</a>
                 </div>
             </div>
         </div>
@@ -370,6 +413,13 @@ $conn->close();
                     <select id="paymentMethod" name="paymentMethod" required>
                         <option value="Transfer Bank">Transfer Bank</option>
                         <option value="E-Wallet">E-Wallet</option>
+                        <option value="OVO">OVO</option>
+                        <option value="Gopay">Gopay</option>
+                        <option value="DANA">DANA</option>
+                        <option value="LinkAja">LinkAja</option>
+                        <option value="ShopeePay">ShopeePay</option>
+                        <option value="Kartu Kredit">Kartu Kredit</option>
+                        <option value="QRIS">QRIS</option>
                     </select>
                 </div>
                 <button type="button" id="sendOTP">Kirim OTP</button>
@@ -394,7 +444,7 @@ $conn->close();
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
+       document.addEventListener('DOMContentLoaded', () => {
         // Handle OTP send button click
         document.getElementById('sendOTP').addEventListener('click', function() {
             const phoneNumber = document.getElementById('phoneNumber').value;
@@ -537,5 +587,5 @@ document.getElementById('topUpForm').addEventListener('submit', function(e) {
 
     });
     </script>
-</body>
+</body>x
 </html>
